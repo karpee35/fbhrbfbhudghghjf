@@ -5,39 +5,44 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: sans-serif; background: var(--tg-theme-bg-color, #fff); color: var(--tg-theme-text-color, #000); margin: 0; padding: 0; }
-        .tabs { display: flex; background: var(--tg-theme-secondary-bg-color, #f0f0f0); padding: 5px; }
-        .tab { flex: 1; padding: 10px; text-align: center; cursor: pointer; border-radius: 8px; transition: 0.3s; }
-        .tab.active { background: var(--tg-theme-bg-color, #fff); font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .content { padding: 20px; display: none; }
-        .content.active { display: block; }
-        .card { background: rgba(0,0,0,0.05); padding: 15px; border-radius: 12px; }
-        input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
-        button { width: 100%; padding: 15px; background: var(--tg-theme-button-color, #3390ec); color: #fff; border: none; border-radius: 8px; font-weight: bold; margin-top: 10px; }
+        body { font-family: sans-serif; background: var(--tg-theme-bg-color, #fff); color: var(--tg-theme-text-color, #000); padding: 15px; margin: 0; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab { flex: 1; padding: 10px; text-align: center; background: rgba(0,0,0,0.05); border-radius: 10px; cursor: pointer; }
+        .tab.active { background: var(--tg-theme-button-color, #3390ec); color: #fff; font-weight: bold; }
+        .container { display: none; }
+        .container.active { display: block; }
+        .card { background: rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.1); padding: 15px; border-radius: 15px; margin-top: 10px; }
+        input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 10px; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; padding: 15px; background: var(--tg-theme-button-color, #3390ec); color: #fff; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .search-result { display: none; border-top: 1px solid #ddd; margin-top: 15px; padding-top: 15px; }
     </style>
 </head>
 <body>
     <div class="tabs">
-        <div class="tab active" onclick="openTab('search-tab')">🔎 Поиск</div>
-        <div class="tab" onclick="openTab('playlist-tab')">➕ Плейлист</div>
+        <div id="t1" class="tab active" onclick="showTab(1)">🔎 Поиск</div>
+        <div id="t2" class="tab" onclick="showTab(2)">➕ Создать плейлист</div>
     </div>
 
-    <div id="search-tab" class="content active">
+    <div id="cont1" class="container active">
         <div class="card">
-            <h3>Найти музыку</h3>
-            <input type="text" id="song_query" placeholder="Название или автор...">
-            <label>Добавить в:</label>
-            <select id="target_playlist">
-                </select>
-            <button onclick="sendAction('search')">Найти и сохранить</button>
+            <h3>Поиск музыки</h3>
+            <input type="text" id="song_query" placeholder="Название трека или автора">
+            <button onclick="findSong()">Найти песню</button>
+            
+            <div id="resultBlock" class="search-result">
+                <p id="foundInfo" style="font-weight: bold;"></p>
+                <label>Выберите плейлист для сохранения:</label>
+                <select id="pl_selector"></select>
+                <button id="addBtn" style="background: #28a745;">📥 Подтвердить и добавить</button>
+            </div>
         </div>
     </div>
 
-    <div id="playlist-tab" class="content">
+    <div id="cont2" class="container">
         <div class="card">
             <h3>Новая коллекция</h3>
-            <input type="text" id="new_pl_name" placeholder="Например: Мой Рок 2026">
-            <button onclick="sendAction('create_pl')">Создать плейлист</button>
+            <input type="text" id="new_pl_name" placeholder="Введите название (напр. 123)">
+            <button onclick="createPL()">Создать плейлист</button>
         </div>
     </div>
 
@@ -45,42 +50,46 @@
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        // Получаем список плейлистов из ссылки (URL Parameters)
-        const urlParams = new URLSearchParams(window.location.search);
-        const playlistsStr = urlParams.get('pls') || "";
-        const playlists = playlistsStr ? playlistsStr.split(',') : [];
-        const select = document.getElementById('target_playlist');
+        // Загружаем плейлисты из URL (переданные ботом)
+        const params = new URLSearchParams(window.location.search);
+        const plList = params.get('pls') ? params.get('pls').split(',') : [];
+        const selector = document.getElementById('pl_selector');
 
-        if (playlists.length === 0) {
-            select.innerHTML = '<option value="">Нет плейлистов</option>';
-        } else {
-            playlists.forEach(name => {
+        function updateSelector() {
+            selector.innerHTML = plList.length ? '' : '<option value="">Нет плейлистов</option>';
+            plList.forEach(p => {
                 let opt = document.createElement('option');
-                opt.value = name;
-                opt.innerHTML = name;
-                select.appendChild(opt);
+                opt.value = p; opt.innerText = p;
+                selector.appendChild(opt);
             });
         }
+        updateSelector();
 
-        function openTab(tabId) {
-            document.querySelectorAll('.content, .tab').forEach(el => el.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            event.currentTarget.classList.add('active');
+        function showTab(n) {
+            document.querySelectorAll('.tab, .container').forEach(e => e.classList.remove('active'));
+            document.getElementById('t'+n).classList.add('active');
+            document.getElementById('cont'+n).classList.add('active');
         }
 
-        function sendAction(type) {
-            let data = {};
-            if (type === 'search') {
-                const query = document.getElementById('song_query').value;
-                const pl = document.getElementById('target_playlist').value;
-                if (!query || !pl) return tg.showAlert("Выберите плейлист и введите запрос!");
-                data = { action: 'add_track', query: query, playlist: pl };
-            } else {
-                const name = document.getElementById('new_pl_name').value;
-                if (!name) return tg.showAlert("Введите название!");
-                data = { action: 'create_playlist', name: name };
-            }
-            tg.sendData(JSON.stringify(data));
+        function findSong() {
+            const q = document.getElementById('song_query').value;
+            if(!q) return tg.showAlert("Введите название!");
+            
+            document.getElementById('foundInfo').innerText = "Выбранный трек: " + q;
+            document.getElementById('resultBlock').style.display = 'block';
+            
+            document.getElementById('addBtn').onclick = function() {
+                const target = selector.value;
+                if(!target) return tg.showAlert("Сначала создайте плейлист!");
+                tg.sendData(JSON.stringify({action: 'add', query: q, playlist: target}));
+                tg.close();
+            };
+        }
+
+        function createPL() {
+            const name = document.getElementById('new_pl_name').value;
+            if(!name) return tg.showAlert("Введите название!");
+            tg.sendData(JSON.stringify({action: 'create', name: name}));
             tg.close();
         }
     </script>
