@@ -5,71 +5,81 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { 
-            font-family: sans-serif; 
-            background-color: var(--tg-theme-bg-color, #ffffff); 
-            color: var(--tg-theme-text-color, #000000);
-            padding: 20px; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 15px;
-        }
-        .card {
-            background: rgba(0,0,0,0.05);
-            padding: 15px;
-            border-radius: 15px;
-        }
-        input {
-            width: 100%;
-            padding: 12px;
-            margin: 8px 0;
-            border-radius: 10px;
-            border: 1px solid #ccc;
-            box-sizing: border-box;
-        }
-        button {
-            width: 100%;
-            padding: 15px;
-            background-color: var(--tg-theme-button-color, #3390ec);
-            color: var(--tg-theme-button-text-color, #ffffff);
-            border: none;
-            border-radius: 10px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        h2 { margin: 0 0 10px 0; font-size: 1.2em; text-align: center; }
+        body { font-family: sans-serif; background: var(--tg-theme-bg-color, #fff); color: var(--tg-theme-text-color, #000); margin: 0; padding: 0; }
+        .tabs { display: flex; background: var(--tg-theme-secondary-bg-color, #f0f0f0); padding: 5px; }
+        .tab { flex: 1; padding: 10px; text-align: center; cursor: pointer; border-radius: 8px; transition: 0.3s; }
+        .tab.active { background: var(--tg-theme-bg-color, #fff); font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .content { padding: 20px; display: none; }
+        .content.active { display: block; }
+        .card { background: rgba(0,0,0,0.05); padding: 15px; border-radius: 12px; }
+        input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; padding: 15px; background: var(--tg-theme-button-color, #3390ec); color: #fff; border: none; border-radius: 8px; font-weight: bold; margin-top: 10px; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h2>➕ Добавить в коллекцию</h2>
-        <label>Название плейлиста:</label>
-        <input type="text" id="pl_name" placeholder="Например: Мой Рок">
-        
-        <label>Какую песню ищем?</label>
-        <input type="text" id="song_query" placeholder="Автор и название">
-        
-        <button onclick="sendToBot()">Добавить и сохранить</button>
+    <div class="tabs">
+        <div class="tab active" onclick="openTab('search-tab')">🔎 Поиск</div>
+        <div class="tab" onclick="openTab('playlist-tab')">➕ Плейлист</div>
+    </div>
+
+    <div id="search-tab" class="content active">
+        <div class="card">
+            <h3>Найти музыку</h3>
+            <input type="text" id="song_query" placeholder="Название или автор...">
+            <label>Добавить в:</label>
+            <select id="target_playlist">
+                </select>
+            <button onclick="sendAction('search')">Найти и сохранить</button>
+        </div>
+    </div>
+
+    <div id="playlist-tab" class="content">
+        <div class="card">
+            <h3>Новая коллекция</h3>
+            <input type="text" id="new_pl_name" placeholder="Например: Мой Рок 2026">
+            <button onclick="sendAction('create_pl')">Создать плейлист</button>
+        </div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        function sendToBot() {
-            const pl = document.getElementById('pl_name').value;
-            const query = document.getElementById('song_query').value;
+        // Получаем список плейлистов из ссылки (URL Parameters)
+        const urlParams = new URLSearchParams(window.location.search);
+        const playlistsStr = urlParams.get('pls') || "";
+        const playlists = playlistsStr ? playlistsStr.split(',') : [];
+        const select = document.getElementById('target_playlist');
 
-            if (!pl || !query) {
-                tg.showAlert("Заполни оба поля!");
-                return;
+        if (playlists.length === 0) {
+            select.innerHTML = '<option value="">Нет плейлистов</option>';
+        } else {
+            playlists.forEach(name => {
+                let opt = document.createElement('option');
+                opt.value = name;
+                opt.innerHTML = name;
+                select.appendChild(opt);
+            });
+        }
+
+        function openTab(tabId) {
+            document.querySelectorAll('.content, .tab').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        function sendAction(type) {
+            let data = {};
+            if (type === 'search') {
+                const query = document.getElementById('song_query').value;
+                const pl = document.getElementById('target_playlist').value;
+                if (!query || !pl) return tg.showAlert("Выберите плейлист и введите запрос!");
+                data = { action: 'add_track', query: query, playlist: pl };
+            } else {
+                const name = document.getElementById('new_pl_name').value;
+                if (!name) return tg.showAlert("Введите название!");
+                data = { action: 'create_playlist', name: name };
             }
-
-            const data = {
-                playlist: pl,
-                search: query
-            };
-
             tg.sendData(JSON.stringify(data));
             tg.close();
         }
