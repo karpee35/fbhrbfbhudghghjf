@@ -5,79 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: sans-serif; background: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); padding: 15px; margin: 0; }
-        .card { background: var(--tg-theme-secondary-bg-color); border-radius: 12px; padding: 15px; margin-bottom: 10px; }
-        input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); box-sizing: border-box; }
-        button { width: 100%; padding: 12px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
-        .btn-search { background: var(--tg-theme-button-color); color: white; width: 100%; margin-top: 10px; }
-        .track-card { background: rgba(0,0,0,0.05); padding: 10px; border-radius: 10px; margin-top: 10px; border: 1px solid rgba(0,0,0,0.1); }
-        .track-title { font-weight: bold; font-size: 14px; display: block; margin-bottom: 5px; }
-        audio { width: 100%; height: 30px; margin: 5px 0; }
-        .pl-select { width: 100%; padding: 8px; margin-top: 5px; border-radius: 5px; }
+        body { font-family: sans-serif; background: #1a1a1a; color: white; padding: 20px; }
+        .card { background: #2c2c2c; padding: 20px; border-radius: 15px; margin-bottom: 20px; }
+        input { width: 100%; padding: 15px; border-radius: 10px; border: none; margin-bottom: 15px; font-size: 16px; }
+        button { width: 100%; padding: 15px; border-radius: 10px; border: none; background: #3390ec; color: white; font-weight: bold; cursor: pointer; }
+        .hint { font-size: 12px; color: #aaa; text-align: center; margin-top: 10px; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h3>🔎 Поиск файлов</h3>
-        <input type="text" id="q" placeholder="Что ищем?">
-        <button class="btn-search" onclick="search()">Найти варианты</button>
+        <h3>🔍 Поиск музыки</h3>
+        <input type="text" id="q" placeholder="Исполнитель и песня...">
+        <button onclick="send('search')">Найти варианты</button>
+        <p class="hint">Бот пришлет 3 аудио-файла в чат. Ты сможешь их послушать и выбрать плейлист.</p>
     </div>
 
-    <div id="results"></div>
+    <div class="card">
+        <h3>📁 Новый плейлист</h3>
+        <input type="text" id="pl" placeholder="Название (например, Рок)">
+        <button style="background: #28a745;" onclick="send('create')">Создать</button>
+    </div>
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand();
-        
-        // Получаем плейлисты из URL
-        const params = new URLSearchParams(window.location.search);
-        const playlists = params.get('pls') ? params.get('pls').split(',') : [];
-
-        // Слушаем ответ от бота с результатами поиска
-        tg.onEvent('mainButtonClicked', function(){}); // Резерв
-
-        function search() {
-            const val = document.getElementById('q').value;
+        function send(action) {
+            const val = action === 'search' ? document.getElementById('q').value : document.getElementById('pl').value;
             if(!val) return;
-            tg.sendData(JSON.stringify({action: 'search_request', data: val}));
-            // Бот пришлет ответ, который мы обработаем через закрытие/открытие или обновление
-        }
-
-        // Функция отрисовки результатов (вызывается, если бот передал данные)
-        function displayResults(tracks) {
-            const cont = document.getElementById('results');
-            cont.innerHTML = '<h4>Выберите лучший вариант:</h4>';
-            
-            tracks.forEach((t, index) => {
-                const div = document.createElement('div');
-                div.className = 'track-card';
-                div.innerHTML = `
-                    <span class="track-title">${t.title}</span>
-                    <audio controls src="${t.url}"></audio>
-                    <select id="pl_${index}" class="pl-select">
-                        ${playlists.map(p => `<option value="${p}">${p}</option>`).join('')}
-                    </select>
-                    <button class="btn-search" onclick="save(${index}, '${t.title}', '${t.url}')">Добавить этот файл</button>
-                `;
-                cont.appendChild(div);
-            });
-        }
-
-        function save(idx, title, url) {
-            const pl = document.getElementById('pl_'+idx).value;
-            tg.sendData(JSON.stringify({
-                action: 'final_save',
-                title: title,
-                url: url,
-                playlist: pl
-            }));
+            tg.sendData(JSON.stringify({action: action, data: val}));
             tg.close();
-        }
-
-        // Имитация получения данных от бота (через параметры URL при перезагрузке)
-        const searchData = params.get('results');
-        if(searchData) {
-            displayResults(JSON.parse(decodeURIComponent(searchData)));
         }
     </script>
 </body>
