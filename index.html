@@ -1,29 +1,77 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: sans-serif; background: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); padding: 20px; text-align: center; }
-        button { background: var(--tg-theme-button-color); color: var(--tg-theme-button-text-color); border: none; padding: 15px; border-radius: 10px; width: 100%; font-size: 16px; cursor: pointer; margin-top: 20px; }
-        input { width: 90%; padding: 10px; border-radius: 5px; border: 1px solid #ccc; margin-bottom: 10px; }
+        body { 
+            font-family: sans-serif; 
+            background-color: var(--tg-theme-bg-color, #ffffff); 
+            color: var(--tg-theme-text-color, #000000);
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px;
+        }
+        .card {
+            background: rgba(0,0,0,0.05);
+            padding: 15px;
+            border-radius: 15px;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background-color: var(--tg-theme-button-color, #3390ec);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        h2 { margin: 0 0 10px 0; font-size: 1.2em; text-align: center; }
     </style>
 </head>
 <body>
-    <h2>🎵 Мой Плеер</h2>
-    <input type="text" id="songName" placeholder="Введите название песни">
-    <button onclick="sendData()">🔍 Найти и отправить в чат</button>
+    <div class="card">
+        <h2>➕ Добавить в коллекцию</h2>
+        <label>Название плейлиста:</label>
+        <input type="text" id="pl_name" placeholder="Например: Мой Рок">
+        
+        <label>Какую песню ищем?</label>
+        <input type="text" id="song_query" placeholder="Автор и название">
+        
+        <button onclick="sendToBot()">Добавить и сохранить</button>
+    </div>
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand(); // Разворачиваем на весь экран
+        tg.expand();
 
-        function sendData() {
-            const name = document.getElementById('songName').value;
-            if (name) {
-                // Отправляем данные боту
-                tg.sendData(JSON.stringify({ query: name }));
+        function sendToBot() {
+            const pl = document.getElementById('pl_name').value;
+            const query = document.getElementById('song_query').value;
+
+            if (!pl || !query) {
+                tg.showAlert("Заполни оба поля!");
+                return;
             }
+
+            const data = {
+                playlist: pl,
+                search: query
+            };
+
+            tg.sendData(JSON.stringify(data));
+            tg.close();
         }
     </script>
 </body>
