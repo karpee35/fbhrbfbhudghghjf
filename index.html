@@ -5,76 +5,80 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: -apple-system, sans-serif; background: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); padding: 15px; margin: 0; }
+        body { font-family: sans-serif; background: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); padding: 15px; margin: 0; }
         .card { background: var(--tg-theme-secondary-bg-color); border-radius: 12px; padding: 15px; margin-bottom: 10px; }
-        input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); box-sizing: border-box; font-size: 16px; }
-        .btn { width: 100%; padding: 12px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .btn-main { background: var(--tg-theme-button-color); color: var(--tg-theme-button-text-color); }
-        .track-item { display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.05); padding: 10px; border-radius: 8px; margin-top: 10px; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 100; }
-        .modal-content { background: var(--tg-theme-bg-color); margin: 20% auto; padding: 20px; width: 80%; border-radius: 15px; }
-        .pl-btn { display: block; width: 100%; padding: 10px; margin: 5px 0; background: var(--tg-theme-button-color); color: white; border-radius: 8px; text-align: center; text-decoration: none; }
+        input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); box-sizing: border-box; }
+        button { width: 100%; padding: 12px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
+        .btn-search { background: var(--tg-theme-button-color); color: white; width: 100%; margin-top: 10px; }
+        .track-card { background: rgba(0,0,0,0.05); padding: 10px; border-radius: 10px; margin-top: 10px; border: 1px solid rgba(0,0,0,0.1); }
+        .track-title { font-weight: bold; font-size: 14px; display: block; margin-bottom: 5px; }
+        audio { width: 100%; height: 30px; margin: 5px 0; }
+        .pl-select { width: 100%; padding: 8px; margin-top: 5px; border-radius: 5px; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h3>🔎 Поиск и проверка</h3>
-        <input type="text" id="query" placeholder="Исполнитель и песня...">
-        <button class="btn btn-main" onclick="searchTrack()">Найти</button>
-        
-        <div id="result" style="display: none;" class="track-item">
-            <span id="track-name"></span>
-            <div>
-                <button onclick="preview()" style="background:none; border:none; font-size:20px;">▶️</button>
-                <button class="btn btn-main" style="width:auto; margin:0;" onclick="showPlaylists()">Выбрать</button>
-            </div>
-        </div>
+        <h3>🔎 Поиск файлов</h3>
+        <input type="text" id="q" placeholder="Что ищем?">
+        <button class="btn-search" onclick="search()">Найти варианты</button>
     </div>
 
-    <div id="modal" class="modal">
-        <div class="modal-content">
-            <h4>Куда добавить?</h4>
-            <div id="pl-list"></div>
-            <button class="btn" style="background:#ff4444; color:white;" onclick="closeModal()">Отмена</button>
-        </div>
-    </div>
+    <div id="results"></div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
         
+        // Получаем плейлисты из URL
         const params = new URLSearchParams(window.location.search);
         const playlists = params.get('pls') ? params.get('pls').split(',') : [];
 
-        function searchTrack() {
-            const q = document.getElementById('query').value;
-            if(!q) return;
-            document.getElementById('track-name').innerText = q;
-            document.getElementById('result').style.display = 'flex';
+        // Слушаем ответ от бота с результатами поиска
+        tg.onEvent('mainButtonClicked', function(){}); // Резерв
+
+        function search() {
+            const val = document.getElementById('q').value;
+            if(!val) return;
+            tg.sendData(JSON.stringify({action: 'search_request', data: val}));
+            // Бот пришлет ответ, который мы обработаем через закрытие/открытие или обновление
         }
 
-        function preview() {
-            tg.showPopup({ title: 'Предпросмотр', message: 'Сейчас заиграет превью трека из YouTube...' });
-        }
-
-        function showPlaylists() {
-            const list = document.getElementById('pl-list');
-            list.innerHTML = '';
-            if(playlists.length === 0) list.innerHTML = 'Сначала создай плейлист в чате!';
-            playlists.forEach(p => {
-                const b = document.createElement('div');
-                b.className = 'pl-btn';
-                b.innerText = p;
-                b.onclick = () => {
-                    tg.sendData(JSON.stringify({action: 'add', query: document.getElementById('track-name').innerText, pl: p}));
-                    tg.close();
-                };
-                list.appendChild(b);
+        // Функция отрисовки результатов (вызывается, если бот передал данные)
+        function displayResults(tracks) {
+            const cont = document.getElementById('results');
+            cont.innerHTML = '<h4>Выберите лучший вариант:</h4>';
+            
+            tracks.forEach((t, index) => {
+                const div = document.createElement('div');
+                div.className = 'track-card';
+                div.innerHTML = `
+                    <span class="track-title">${t.title}</span>
+                    <audio controls src="${t.url}"></audio>
+                    <select id="pl_${index}" class="pl-select">
+                        ${playlists.map(p => `<option value="${p}">${p}</option>`).join('')}
+                    </select>
+                    <button class="btn-search" onclick="save(${index}, '${t.title}', '${t.url}')">Добавить этот файл</button>
+                `;
+                cont.appendChild(div);
             });
-            document.getElementById('modal').style.display = 'block';
         }
 
-        function closeModal() { document.getElementById('modal').style.display = 'none'; }
+        function save(idx, title, url) {
+            const pl = document.getElementById('pl_'+idx).value;
+            tg.sendData(JSON.stringify({
+                action: 'final_save',
+                title: title,
+                url: url,
+                playlist: pl
+            }));
+            tg.close();
+        }
+
+        // Имитация получения данных от бота (через параметры URL при перезагрузке)
+        const searchData = params.get('results');
+        if(searchData) {
+            displayResults(JSON.parse(decodeURIComponent(searchData)));
+        }
     </script>
 </body>
 </html>
