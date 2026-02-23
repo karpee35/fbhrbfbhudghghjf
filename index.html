@@ -5,36 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: sans-serif; background: var(--tg-theme-bg-color, #fff); color: var(--tg-theme-text-color, #000); padding: 15px; }
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-        .tab { flex: 1; padding: 12px; text-align: center; background: rgba(0,0,0,0.05); border-radius: 10px; cursor: pointer; }
-        .tab.active { background: var(--tg-theme-button-color, #3390ec); color: #fff; font-weight: bold; }
+        body { font-family: -apple-system, sans-serif; background: var(--tg-theme-bg-color, #fff); color: var(--tg-theme-text-color, #000); margin: 0; padding: 15px; }
+        .tabs { display: flex; background: rgba(0,0,0,0.05); padding: 4px; border-radius: 12px; margin-bottom: 20px; }
+        .tab { flex: 1; padding: 10px; text-align: center; border-radius: 10px; cursor: pointer; font-weight: 500; }
+        .tab.active { background: var(--tg-theme-button-color, #3390ec); color: #fff; }
         .container { display: none; }
         .container.active { display: block; }
-        .card { background: rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.1); padding: 15px; border-radius: 15px; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 10px; box-sizing: border-box; font-size: 16px; }
-        button { width: 100%; padding: 15px; background: var(--tg-theme-button-color, #3390ec); color: #fff; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
-        p { font-size: 0.9em; opacity: 0.8; text-align: center; }
+        .card { background: var(--tg-theme-secondary-bg-color, #f5f5f5); padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        input { width: 100%; padding: 14px; margin: 12px 0; border: 1px solid rgba(0,0,0,0.1); border-radius: 12px; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; padding: 16px; background: var(--tg-theme-button-color, #3390ec); color: #fff; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        .hint { font-size: 13px; opacity: 0.6; text-align: center; margin-top: 15px; line-height: 1.4; }
     </style>
 </head>
 <body>
     <div class="tabs">
         <div id="t1" class="tab active" onclick="showTab(1)">🔎 Найти песню</div>
-        <div id="t2" class="tab" onclick="showTab(2)">📁 Новый плейлист</div>
+        <div id="t2" class="tab" onclick="showTab(2)">📁 Создать плейлист</div>
     </div>
 
     <div id="cont1" class="container active">
         <div class="card">
             <input type="text" id="song_query" placeholder="Исполнитель и название...">
-            <button onclick="search()">Найти и проверить</button>
-            <p>Бот пришлет трек в чат, там ты выберешь плейлист.</p>
+            <button onclick="search()">Найти в YouTube</button>
+            <p class="hint">Бот пришлет лучший вариант в чат. Вы сможете проверить его и выбрать плейлист для сохранения.</p>
         </div>
     </div>
 
     <div id="cont2" class="container">
         <div class="card">
             <input type="text" id="new_pl_name" placeholder="Название (напр. Избранное)">
-            <button onclick="createPL()">Создать плейлист</button>
+            <button onclick="createPL()">Добавить коллекцию</button>
         </div>
     </div>
 
@@ -50,14 +50,14 @@
 
         function search() {
             const q = document.getElementById('song_query').value;
-            if(!q) return tg.showAlert("Что искать?");
+            if(!q) return tg.showAlert("Введите название песни!");
             tg.sendData(JSON.stringify({action: 'search', query: q}));
             tg.close();
         }
 
         function createPL() {
             const name = document.getElementById('new_pl_name').value;
-            if(!name) return tg.showAlert("Введите название");
+            if(!name) return tg.showAlert("Введите название плейлиста!");
             tg.sendData(JSON.stringify({action: 'create', name: name}));
             tg.close();
         }
