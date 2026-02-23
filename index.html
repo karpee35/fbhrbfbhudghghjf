@@ -5,91 +5,73 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: sans-serif; background: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); margin: 0; padding: 15px; }
-        .card { background: var(--tg-theme-secondary-bg-color); border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ccc; box-sizing: border-box; }
-        .search-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.1); }
-        .btn { padding: 10px 15px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
-        .btn-play { background: #3390ec; color: #fff; margin-right: 5px; }
-        .btn-select { background: #28a745; color: #fff; }
-        .playlist-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); padding: 20px; z-index: 100; }
-        .modal-content { background: var(--tg-theme-bg-color); border-radius: 20px; padding: 20px; }
-        .pl-item { padding: 15px; border-bottom: 1px solid #ddd; text-align: center; font-weight: bold; }
+        body { font-family: -apple-system, sans-serif; background: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); padding: 15px; margin: 0; }
+        .card { background: var(--tg-theme-secondary-bg-color); border-radius: 12px; padding: 15px; margin-bottom: 10px; }
+        input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); box-sizing: border-box; font-size: 16px; }
+        .btn { width: 100%; padding: 12px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-main { background: var(--tg-theme-button-color); color: var(--tg-theme-button-text-color); }
+        .track-item { display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.05); padding: 10px; border-radius: 8px; margin-top: 10px; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 100; }
+        .modal-content { background: var(--tg-theme-bg-color); margin: 20% auto; padding: 20px; width: 80%; border-radius: 15px; }
+        .pl-btn { display: block; width: 100%; padding: 10px; margin: 5px 0; background: var(--tg-theme-button-color); color: white; border-radius: 8px; text-align: center; text-decoration: none; }
     </style>
 </head>
 <body>
-
     <div class="card">
-        <h3>🔎 Глобальный поиск</h3>
-        <input type="text" id="q" placeholder="Исполнитель и название...">
-        <button class="btn btn-play" style="width: 100%; margin-top: 10px;" onclick="startSearch()">Найти треки</button>
+        <h3>🔎 Поиск и проверка</h3>
+        <input type="text" id="query" placeholder="Исполнитель и песня...">
+        <button class="btn btn-main" onclick="searchTrack()">Найти</button>
+        
+        <div id="result" style="display: none;" class="track-item">
+            <span id="track-name"></span>
+            <div>
+                <button onclick="preview()" style="background:none; border:none; font-size:20px;">▶️</button>
+                <button class="btn btn-main" style="width:auto; margin:0;" onclick="showPlaylists()">Выбрать</button>
+            </div>
+        </div>
     </div>
 
-    <div id="results" class="card" style="display: none;">
-        <h4>Результаты (можно прослушать):</h4>
-        <div id="results-list"></div>
-    </div>
-
-    <div id="modal" class="playlist-modal">
+    <div id="modal" class="modal">
         <div class="modal-content">
-            <h3>В какой плейлист добавить?</h3>
+            <h4>Куда добавить?</h4>
             <div id="pl-list"></div>
-            <button class="btn btn-play" style="width: 100%; margin-top: 15px; background: #666;" onclick="closeModal()">Отмена</button>
+            <button class="btn" style="background:#ff4444; color:white;" onclick="closeModal()">Отмена</button>
         </div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
+        
+        const params = new URLSearchParams(window.location.search);
+        const playlists = params.get('pls') ? params.get('pls').split(',') : [];
 
-        let selectedTrack = null;
-        const urlParams = new URLSearchParams(window.location.search);
-        const userPlaylists = urlParams.get('pls') ? urlParams.get('pls').split(',') : [];
-
-        function startSearch() {
-            const q = document.getElementById('q').value;
-            if(!q) return tg.showAlert("Введите название!");
-            
-            // Имитация поиска (в идеале тут fetch к API)
-            document.getElementById('results').style.display = 'block';
-            const list = document.getElementById('results-list');
-            list.innerHTML = `
-                <div class="search-item">
-                    <span>${q} (Official)</span>
-                    <div>
-                        <button class="btn btn-play" onclick="tg.showAlert('Тут будет играть аудио...')">▶️</button>
-                        <button class="btn btn-select" onclick="openModal('${q}')">Выбрать</button>
-                    </div>
-                </div>
-            `;
+        function searchTrack() {
+            const q = document.getElementById('query').value;
+            if(!q) return;
+            document.getElementById('track-name').innerText = q;
+            document.getElementById('result').style.display = 'flex';
         }
 
-        function openModal(track) {
-            selectedTrack = track;
-            const plContainer = document.getElementById('pl-list');
-            plContainer.innerHTML = '';
-            
-            if(userPlaylists.length === 0) {
-                plContainer.innerHTML = '<p>Сначала создайте плейлист в чате!</p>';
-            }
+        function preview() {
+            tg.showPopup({ title: 'Предпросмотр', message: 'Сейчас заиграет превью трека из YouTube...' });
+        }
 
-            userPlaylists.forEach(name => {
-                const div = document.createElement('div');
-                div.className = 'pl-item';
-                div.innerText = name;
-                div.onclick = () => confirmAdd(name);
-                plContainer.appendChild(div);
+        function showPlaylists() {
+            const list = document.getElementById('pl-list');
+            list.innerHTML = '';
+            if(playlists.length === 0) list.innerHTML = 'Сначала создай плейлист в чате!';
+            playlists.forEach(p => {
+                const b = document.createElement('div');
+                b.className = 'pl-btn';
+                b.innerText = p;
+                b.onclick = () => {
+                    tg.sendData(JSON.stringify({action: 'add', query: document.getElementById('track-name').innerText, pl: p}));
+                    tg.close();
+                };
+                list.appendChild(b);
             });
             document.getElementById('modal').style.display = 'block';
-        }
-
-        function confirmAdd(plName) {
-            tg.sendData(JSON.stringify({
-                action: 'final_add',
-                query: selectedTrack,
-                playlist: plName
-            }));
-            tg.close();
         }
 
         function closeModal() { document.getElementById('modal').style.display = 'none'; }
